@@ -5,20 +5,45 @@ class Chatbot {
         this.sendButton = document.getElementById('sendButton');
         this.typingIndicator = document.getElementById('typingIndicator');
         
-        this.responses = {
-            "xin chào": "Xin chào! Tôi có thể giúp gì cho bạn?",
-            "chào": "Chào bạn! Rất vui được gặp bạn!",
-            "hello": "Hello! How can I help you today?",
-            "hi": "Hi there! What can I do for you?",
-            "bạn là ai": "Tôi là chatbot AI được tạo ra để hỗ trợ bạn!",
-            "cảm ơn": "Không có gì! Tôi luôn sẵn sàng giúp đỡ bạn!",
-            "tạm biệt": "Tạm biệt! Hẹn gặp lại bạn lần sau!",
-            "bye": "Goodbye! Have a great day!",
-            "bạn có thể làm gì": "Tôi có thể trò chuyện với bạn, trả lời câu hỏi và hỗ trợ bạn!",
-            "thời tiết": "Xin lỗi, tôi không thể kiểm tra thời tiết. Bạn có thể xem trên ứng dụng thời tiết!",
-            "giúp": "Tôi có thể trò chuyện và trả lời các câu hỏi cơ bản. Hãy thử hỏi tôi điều gì đó!",
-            "help": "I can chat and answer basic questions. Try asking me something!"
-        };
+        // Khởi tạo conversation history với system prompt
+        this.conversationHistory = [
+            {
+                "role": "system", 
+                "content": `You are a helpful assistant
+        You are the MindTek AI Assistant — a friendly and helpful virtual assistant representing MindTek AI, a company that offers AI consulting and implementation services.
+
+                            Your goal is to guide users through a structured discovery conversation to understand their industry, challenges, and contact details, and recommend appropriate services.
+
+                            💬 Always keep responses short, helpful, and polite.
+                            💬 Always reply in the same language the user speaks.
+                            💬 Ask only one question at a time.
+
+                            🔍 RECOMMENDED SERVICES:
+                            - For real estate: Mention customer data extraction from documents, integration with CRM, and lead generation via 24/7 chatbots.
+                            - For education: Mention email automation and AI training.
+                            - For retail/customer service: Mention voice-based customer service chatbots, digital marketing, and AI training.
+                            - For other industries: Mention chatbots, process automation, and digital marketing.
+                            ✅ BENEFITS: Emphasize saving time, reducing costs, and improving customer satisfaction.
+                            💰 PRICING: Only mention "starting from $1000 USD" if the user explicitly asks about pricing.
+
+                            🧠 CONVERSATION FLOW:
+                            1. Ask what industry the user works in.
+                            2. Then ask what specific challenges or goals they have.
+                            3. Based on that, recommend relevant MindTek AI services.
+                            4. Ask if they would like to learn more about the solutions.
+                            5. If yes, collect their name → email → phone number (one at a time).
+                            6. Provide a more technical description of the solution and invite them to book a free consultation.
+                            7. Finally, ask if they have any notes or questions before ending the chat.
+                            ⚠️ OTHER RULES:
+                            - Be friendly but concise.
+                            - Do not ask multiple questions at once.
+                            - Do not mention pricing unless asked.
+                            - Stay on-topic and professional throughout the conversation.`
+            }
+        ];
+        
+        // Cấu hình cho local server (an toàn)
+        this.apiUrl = 'http://localhost:5000/chat'; // Gọi đến local Python server
         
         this.init();
     }
@@ -34,19 +59,31 @@ class Chatbot {
         this.messageInput.focus();
     }
     
-    sendMessage() {
+    async sendMessage() {
         const message = this.messageInput.value.trim();
         if (!message) return;
         
         this.addMessage(message, 'user');
         this.messageInput.value = '';
         
+        // Thêm tin nhắn người dùng vào lịch sử hội thoại
+        this.conversationHistory.push({"role": "user", "content": message});
+        
         this.showTypingIndicator();
-        setTimeout(() => {
+        
+        try {
+            const response = await this.generateResponse();
             this.hideTypingIndicator();
-            const response = this.generateResponse(message);
             this.addMessage(response, 'bot');
-        }, 1000 + Math.random() * 1000);
+            
+            // Thêm phản hồi của AI vào lịch sử hội thoại
+            this.conversationHistory.push({"role": "assistant", "content": response});
+        } catch (error) {
+            this.hideTypingIndicator();
+            const errorMessage = "Xin lỗi, có lỗi xảy ra. Vui lòng thử lại sau.";
+            this.addMessage(errorMessage, 'bot');
+            console.error('Error:', error);
+        }
     }
     
     addMessage(text, sender) {
@@ -67,28 +104,55 @@ class Chatbot {
         this.scrollToBottom();
     }
     
-    generateResponse(message) {
-        const lowercaseMessage = message.toLowerCase();
-        
-        // Tìm kiếm phản hồi phù hợp
-        for (const [key, value] of Object.entries(this.responses)) {
-            if (lowercaseMessage.includes(key)) {
-                return value;
+    async generateResponse() {
+        console.log('🔍 Đang gửi request tới local server...');
+        console.log('Conversation history:', this.conversationHistory);
+
+        try {
+            const requestBody = {
+                messages: this.conversationHistory
+            };
+            
+            console.log('Request body:', requestBody);
+
+            const response = await fetch(this.apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            });
+
+            console.log('Response status:', response.status);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Server Error Response:', errorText);
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
             }
+
+            const data = await response.json();
+            console.log('✅ Server Response successful:', data);
+            
+            if (data.success) {
+                return data.message;
+            } else {
+                throw new Error(data.error || 'Unknown server error');
+            }
+        } catch (error) {
+            console.error('❌ Server Error Details:', error);
+            
+            // Xử lý các loại lỗi khác nhau
+            let errorMessage = "Xin lỗi, có lỗi xảy ra với dịch vụ AI.";
+            
+            if (error.message.includes('Failed to fetch')) {
+                errorMessage = "🔌 Không thể kết nối đến server. Vui lòng chạy: python chatbot_server.py";
+            } else if (error.message.includes('500')) {
+                errorMessage = "🚨 Lỗi server. Vui lòng kiểm tra API key trong file .env";
+            }
+            
+            return errorMessage + `\n\n🔧 Chi tiết lỗi: ${error.message}`;
         }
-        
-        // Phản hồi mặc định
-        const defaultResponses = [
-            "Thú vị! Bạn có thể kể thêm về điều đó không?",
-            "Tôi hiểu rồi. Còn điều gì khác bạn muốn nói?",
-            "Điều đó nghe có vẻ thú vị! Bạn nghĩ sao về nó?",
-            "Cảm ơn bạn đã chia sẻ! Tôi có thể giúp gì khác không?",
-            "Hmm, tôi chưa hiểu rõ lắm. Bạn có thể giải thích thêm không?",
-            "Đó là một ý kiến hay! Bạn còn suy nghĩ gì khác?",
-            "Tôi đang học hỏi từ cuộc trò chuyện này. Còn gì nữa không?"
-        ];
-        
-        return defaultResponses[Math.floor(Math.random() * defaultResponses.length)];
     }
     
     showTypingIndicator() {
@@ -111,9 +175,70 @@ class Chatbot {
         div.textContent = text;
         return div.innerHTML;
     }
+    
+    // Method để tải API key từ localStorage
+    loadApiKey() {
+        return localStorage.getItem('openai_api_key') || '';
+    }
+    
+    // Method để lưu API key vào localStorage
+    setApiKey(key) {
+        this.apiKey = key;
+        localStorage.setItem('openai_api_key', key);
+    }
+    
+    // Method để xóa lịch sử hội thoại
+    clearConversation() {
+        this.conversationHistory = [this.conversationHistory[0]]; // Giữ lại system prompt
+        this.chatMessages.innerHTML = '<div id="typingIndicator" class="typing-indicator"><span></span><span></span><span></span></div>';
+        this.typingIndicator = document.getElementById('typingIndicator');
+    }
+    
+    // Method để xuất lịch sử hội thoại
+    exportConversation() {
+        const conversation = {
+            timestamp: new Date().toISOString(),
+            messages: this.conversationHistory.slice(1) // Bỏ system prompt
+        };
+        return JSON.stringify(conversation, null, 2);
+    }
 }
 
 // Khởi tạo chatbot khi trang web được tải
 document.addEventListener('DOMContentLoaded', () => {
-    new Chatbot();
+    window.chatbot = new Chatbot();
+    
+    // Thêm helper functions để dễ sử dụng
+    window.clearChat = () => window.chatbot.clearConversation();
+    window.exportChat = () => window.chatbot.exportConversation();
+    window.debugServer = () => {
+        console.log('🔍 Debug Server Information:');
+        console.log('Server URL:', window.chatbot.apiUrl);
+        console.log('Conversation History Length:', window.chatbot.conversationHistory.length);
+        return 'Check console for debug info';
+    };
+    window.testServer = async () => {
+        console.log('🧪 Testing server connection...');
+        try {
+            const response = await fetch('http://localhost:5000/health');
+            const data = await response.json();
+            console.log('✅ Server test successful:', data);
+            return data;
+        } catch (error) {
+            console.error('❌ Server test failed:', error);
+            return 'Server test failed: ' + error.message;
+        }
+    };
+    
+    // Hiển thị tin nhắn chào mừng
+    setTimeout(() => {
+        const welcomeMessage = "Chào mừng bạn đến với MindTek AI Assistant! 🤖\n\n" +
+                             "🔒 API key được bảo mật trong server backend.\n" +
+                             "📋 Để sử dụng chatbot:\n" +
+                             "1. Chạy: python chatbot_server.py\n" +
+                             "2. Cấu hình API key trong file .env\n" +
+                             "3. Bắt đầu trò chuyện!\n\n" +
+                             "Hãy bắt đầu bằng cách cho tôi biết bạn làm việc trong lĩnh vực gì? 😊";
+        window.chatbot.addMessage(welcomeMessage, 'bot');
+    }, 1000);
 });
