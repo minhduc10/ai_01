@@ -1,7 +1,17 @@
 import openai
+import os
+from dotenv import load_dotenv
 
+# Nạp các biến môi trường từ file .env
+load_dotenv()
 
-api_key = "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"
+# Lấy API key từ biến môi trường (an toàn)
+api_key = os.getenv("OPENAI_API_KEYTST")
+if not api_key:
+    print("❌ Không tìm thấy API key trong file .env")
+    print("💡 Vui lòng kiểm tra file .env có chứa: OPENAI_API_KEYTST=your-key")
+    exit(1)
+
 client = openai.OpenAI(api_key=api_key)
 
 response = client.chat.completions.create(
