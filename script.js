@@ -221,18 +221,25 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     window.testServer = async () => {
         console.log('🧪 Testing server connection...');
-        try {
-            const healthUrl = window.location.hostname === 'localhost' 
-                ? 'http://localhost:5000/health'
-                : '/health';
-            const response = await fetch(healthUrl);
-            const data = await response.json();
-            console.log('✅ Server test successful:', data);
-            return data;
-        } catch (error) {
-            console.error('❌ Server test failed:', error);
-            return 'Server test failed: ' + error.message;
+        const isLocal = window.location.hostname === 'localhost';
+        
+        const healthUrls = isLocal 
+            ? ['http://localhost:5000/health']
+            : ['/health', '/api/health'];
+        
+        for (const healthUrl of healthUrls) {
+            try {
+                console.log(`Testing: ${healthUrl}`);
+                const response = await fetch(healthUrl);
+                const data = await response.json();
+                console.log('✅ Server test successful:', data);
+                return data;
+            } catch (error) {
+                console.warn(`❌ Failed ${healthUrl}:`, error.message);
+            }
         }
+        
+        return 'All health endpoints failed';
     };
     
     // Hiển thị tin nhắn chào mừng

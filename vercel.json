@@ -2,25 +2,34 @@
   "version": 2,
   "builds": [
     {
-      "src": "chatbot_server.py",
+      "src": "api/chat.py",
+      "use": "@vercel/python"
+    },
+    {
+      "src": "api/health.py", 
       "use": "@vercel/python"
     }
   ],
   "routes": [
     {
+      "src": "/api/chat",
+      "dest": "/api/chat.py"
+    },
+    {
+      "src": "/api/health",
+      "dest": "/api/health.py"
+    },
+    {
       "src": "/chat",
-      "dest": "/chatbot_server.py"
+      "dest": "/api/chat.py"
     },
     {
       "src": "/health",
-      "dest": "/chatbot_server.py"
+      "dest": "/api/health.py"
     },
     {
       "src": "/(.*)",
       "dest": "/index.html"
     }
-  ],
-  "env": {
-    "PYTHONPATH": "./"
-  }
+  ]
 }
