@@ -1,35 +1,16 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "api/chat.py",
-      "use": "@vercel/python"
+  "functions": {
+    "api/chat.py": {
+      "runtime": "python3.9"
     },
-    {
-      "src": "api/health.py", 
-      "use": "@vercel/python"
+    "api/health.py": {
+      "runtime": "python3.9"
     }
-  ],
+  },
   "routes": [
-    {
-      "src": "/api/chat",
-      "dest": "/api/chat.py"
-    },
-    {
-      "src": "/api/health",
-      "dest": "/api/health.py"
-    },
-    {
-      "src": "/chat",
-      "dest": "/api/chat.py"
-    },
-    {
-      "src": "/health",
-      "dest": "/api/health.py"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
-    }
+    { "src": "/chat", "dest": "/api/chat" },
+    { "src": "/health", "dest": "/api/health" },
+    { "src": "/api/(.*)", "dest": "/api/$1" },
+    { "src": "/(.*)", "dest": "/$1" }
   ]
 }

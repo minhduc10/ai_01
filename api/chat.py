@@ -1,52 +1,50 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS
+import json
 import os
-from dotenv import load_dotenv
 import openai
 
-# Nạp các biến môi trường từ file .env
-load_dotenv()
-
-app = Flask(__name__)
-CORS(app)  # Cho phép CORS cho frontend
-
-# Lấy API key từ biến môi trường (sử dụng file .env của bạn)
-api_key = os.getenv("OPENAI_API_KEYTST") or os.getenv("OPENAI_API_KEY")
-
-# Nếu không tìm thấy trong .env, in thông báo debug
-if not api_key:
-    print("🔍 Đang tìm kiếm API key...")
-    print("📁 Đường dẫn hiện tại:", os.getcwd())
-    print("📋 Các biến môi trường có sẵn:")
-    for key in os.environ:
-        if 'OPENAI' in key.upper():
-            print(f"   - {key}: {os.environ[key][:20]}...")
-    
-    # Thử các tên biến khác có thể có
-    api_key = (os.getenv("OPENAI_API_KEY") or 
-               os.getenv("OPENAI_API_KEYTST") or 
-               os.getenv("OPENAI_KEY"))
-    
-    if not api_key:
-        print("❌ Không tìm thấy API key trong environment variables")
-        api_key = "dummy-key"  # Fallback for deployment
-
-client = openai.OpenAI(api_key=api_key) if api_key != "dummy-key" else None
-
 def handler(request):
+    # CORS headers
+    headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Content-Type': 'application/json'
+    }
+    
+    # Handle OPTIONS request for CORS
     if request.method == 'OPTIONS':
-        return jsonify({'status': 'ok'}), 200
+        return {
+            'statusCode': 200,
+            'headers': headers,
+            'body': json.dumps({'status': 'ok'})
+        }
     
     if request.method == 'POST':
         try:
-            if not client:
-                return jsonify({
-                    'success': False,
-                    'error': 'API key not configured'
-                }), 500
+            # Lấy API key từ environment variables
+            api_key = os.getenv("OPENAI_API_KEYTST") or os.getenv("OPENAI_API_KEY")
             
-            # Lấy dữ liệu từ frontend
-            data = request.get_json()
+            if not api_key:
+                return {
+                    'statusCode': 500,
+                    'headers': headers,
+                    'body': json.dumps({
+                        'success': False,
+                        'error': 'API key not configured',
+                        'debug': 'No OPENAI_API_KEYTST or OPENAI_API_KEY found'
+                    })
+                }
+            
+            # Khởi tạo OpenAI client
+            client = openai.OpenAI(api_key=api_key)
+            
+            # Parse request body
+            if hasattr(request, 'get_json'):
+                data = request.get_json()
+            else:
+                import json
+                data = json.loads(request.data.decode('utf-8'))
+            
             messages = data.get('messages', [])
             
             print(f"📨 Received request with {len(messages)} messages")
@@ -62,20 +60,28 @@ def handler(request):
             reply = response.choices[0].message.content
             print(f"✅ OpenAI response: {reply[:50]}...")
             
-            return jsonify({
-                'success': True,
-                'message': reply
-            })
+            return {
+                'statusCode': 200,
+                'headers': headers,
+                'body': json.dumps({
+                    'success': True,
+                    'message': reply
+                })
+            }
             
         except Exception as e:
             print(f"❌ Error: {str(e)}")
-            return jsonify({
-                'success': False,
-                'error': str(e)
-            }), 500
+            return {
+                'statusCode': 500,
+                'headers': headers,
+                'body': json.dumps({
+                    'success': False,
+                    'error': str(e)
+                })
+            }
     
-    return jsonify({'error': 'Method not allowed'}), 405
-
-# For Vercel serverless functions
-def main(request):
-    return handler(request)
+    return {
+        'statusCode': 405,
+        'headers': headers,
+        'body': json.dumps({'error': 'Method not allowed'})
+    }
