@@ -1,9 +1,21 @@
 class Chatbot {
     constructor() {
+        // Kiểm tra elements có tồn tại không
         this.chatMessages = document.getElementById('chatMessages');
         this.messageInput = document.getElementById('messageInput');
         this.sendButton = document.getElementById('sendButton');
         this.typingIndicator = document.getElementById('typingIndicator');
+        
+        if (!this.chatMessages || !this.messageInput || !this.sendButton || !this.typingIndicator) {
+            console.error('❌ Some required elements not found!');
+            console.log('chatMessages:', this.chatMessages);
+            console.log('messageInput:', this.messageInput);
+            console.log('sendButton:', this.sendButton);
+            console.log('typingIndicator:', this.typingIndicator);
+            return;
+        }
+        
+        console.log('✅ All elements found successfully');
         
         // Khởi tạo conversation history với system prompt
         this.conversationHistory = [
@@ -208,7 +220,13 @@ class Chatbot {
 
 // Khởi tạo chatbot khi trang web được tải
 document.addEventListener('DOMContentLoaded', () => {
-    window.chatbot = new Chatbot();
+    console.log('🚀 DOM Content Loaded, initializing chatbot...');
+    try {
+        window.chatbot = new Chatbot();
+        console.log('✅ Chatbot initialized successfully');
+    } catch (error) {
+        console.error('❌ Error initializing chatbot:', error);
+    }
     
     // Thêm helper functions để dễ sử dụng
     window.clearChat = () => window.chatbot.clearConversation();
