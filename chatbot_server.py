@@ -73,6 +73,13 @@ def health():
         'api_key_configured': bool(api_key)
     })
 
+# For Vercel deployment - export app
+def handler(request):
+    return app(request)
+
+# Export app for Vercel
+app = app
+
 if __name__ == '__main__':
     print("=" * 50)
     print("    🤖 MINDTEK AI CHATBOT SERVER 🤖")
@@ -80,17 +87,8 @@ if __name__ == '__main__':
     
     if not api_key:
         print("❌ WARNING: OPENAI_API_KEYTST not found in environment variables!")
-        print("📝 Đang tạo file .env...")
-        
-        # Tự động tạo file .env nếu chưa có
-        import subprocess
-        try:
-            subprocess.run(['python', 'create_env.py'], check=True)
-            print("✅ File .env đã được tạo! Vui lòng khởi động lại server.")
-            exit()
-        except:
-            print("❌ Không thể tạo file .env. Vui lòng tạo thủ công.")
-            exit()
+        print("💡 Please configure environment variables on your platform")
+        exit(1)
     else:
         print("✅ API key loaded successfully!")
         print(f"🔑 API key starts with: {api_key[:15]}...")

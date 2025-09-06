@@ -42,8 +42,10 @@ class Chatbot {
             }
         ];
         
-        // Cấu hình cho local server (an toàn)
-        this.apiUrl = 'http://localhost:5000/chat'; // Gọi đến local Python server
+        // Cấu hình cho deployment (Vercel hoặc local)
+        this.apiUrl = window.location.hostname === 'localhost' 
+            ? 'http://localhost:5000/chat'  // Local development
+            : '/chat';  // Production (Vercel)
         
         this.init();
     }
@@ -220,7 +222,10 @@ document.addEventListener('DOMContentLoaded', () => {
     window.testServer = async () => {
         console.log('🧪 Testing server connection...');
         try {
-            const response = await fetch('http://localhost:5000/health');
+            const healthUrl = window.location.hostname === 'localhost' 
+                ? 'http://localhost:5000/health'
+                : '/health';
+            const response = await fetch(healthUrl);
             const data = await response.json();
             console.log('✅ Server test successful:', data);
             return data;
@@ -232,13 +237,19 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Hiển thị tin nhắn chào mừng
     setTimeout(() => {
-        const welcomeMessage = "Chào mừng bạn đến với MindTek AI Assistant! 🤖\n\n" +
-                             "🔒 API key được bảo mật trong server backend.\n" +
-                             "📋 Để sử dụng chatbot:\n" +
-                             "1. Chạy: python chatbot_server.py\n" +
-                             "2. Cấu hình API key trong file .env\n" +
-                             "3. Bắt đầu trò chuyện!\n\n" +
-                             "Hãy bắt đầu bằng cách cho tôi biết bạn làm việc trong lĩnh vực gì? 😊";
+        const isLocal = window.location.hostname === 'localhost';
+        const welcomeMessage = isLocal 
+            ? "Chào mừng bạn đến với MindTek AI Assistant! 🤖\n\n" +
+              "🔒 API key được bảo mật trong server backend.\n" +
+              "📋 Local Development Mode:\n" +
+              "1. Chạy: python chatbot_server.py\n" +
+              "2. Cấu hình API key trong file .env\n" +
+              "3. Bắt đầu trò chuyện!\n\n" +
+              "Hãy bắt đầu bằng cách cho tôi biết bạn làm việc trong lĩnh vực gì? 😊"
+            : "Chào mừng bạn đến với MindTek AI Assistant! 🤖\n\n" +
+              "🚀 Production Mode - API key được bảo mật trên Vercel\n" +
+              "💡 Tôi đã sẵn sàng tư vấn dịch vụ AI cho doanh nghiệp của bạn!\n\n" +
+              "Hãy bắt đầu bằng cách cho tôi biết bạn làm việc trong lĩnh vực gì? 😊";
         window.chatbot.addMessage(welcomeMessage, 'bot');
     }, 1000);
 });
